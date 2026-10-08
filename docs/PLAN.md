@@ -13,7 +13,7 @@ Every phase ends with something runnable and a "what I learned / why" note in `d
 ## Progress
 - [x] **Phase 0: Setup** (uv, git, config, Postgres in Docker, pgAdmin): done 2026-10-08, see [phase-0.md](phase-0.md)
 - [x] **Phase 1: Data and SQL** (IMDb ETL into Postgres, schema, queries, indexes): done 2026-10-08, see [phase-1.md](phase-1.md)
-- [ ] **Phase 2: Import pipeline** (browser tabs + manual add → matched movies, TMDB enrichment): *next*
+- [ ] **Phase 2: Add movies one by one** (paste URL or title → match → confirm → watchlist, TMDB enrichment): *next*
 - [ ] **Phase 3: Streamlit MVP** (import review, poster grid, stats)
 - [ ] **Phase 4: FastAPI** (REST API, Streamlit switched to call it)
 - [ ] **Phase 5: LLM chatbot** (Ollama/Groq, tool calling over the services)
@@ -43,7 +43,7 @@ movies_collection/
     db/models.py, session.py, migrations/ (alembic)
     etl/imdb_loader.py    # download + bulk-load IMDb TSVs
     services/             # movies.py, watchlist.py, matcher.py, tmdb.py  ← business logic
-    importers/tabs.py     # parse exported tab URLs/titles → candidate titles
+    services/parse_input.py  # URL or title → IMDb id or search text (+year)
     api/                  # FastAPI routers: movies, watchlist, import, chat
     llm/                  # provider.py (Ollama/Groq), tools.py, agent.py
   ui/streamlit_app.py
@@ -71,23 +71,25 @@ Schema: `movies` (tconst PK, title, year, runtime), `genres` + `movie_genres` (m
 Practice SQL in pgAdmin: joins, window functions (top-rated per genre), EXPLAIN plans.
 *Learn:* ETL, normalization, indexes, migrations.
 
-### Phase 2: Import pipeline (the core problem)
-- Tab export: a "copy all tab URLs" browser extension, or a session file → txt/JSON.
-- `importers/tabs.py`: pull out the IMDb ID straight from `imdb.com/title/tt…` URLs. For Google/other
-  search URLs, take the `q=` param or the page title and strip noise ("movie", "imdb", "trailer", a year).
-- `services/matcher.py`: an exact tconst match first. Otherwise fuzzy match (`pg_trgm` / `rapidfuzz`),
-  boosted by year and by numVotes for popularity. Low-confidence matches go to a **review queue**.
-- Manual add: the same matcher, applied to a single title.
+### Phase 2: Add movies one by one (the core feature)
+I paste **one URL** (IMDb link, Google search, any movie page) **or type a title**, check the match, and confirm.
+- `services/parse_input.py`: an IMDb URL gives the exact `tt…` id. A Google/other search URL gives the `q=` text.
+  Plain text gives the title, plus a year if one is present.
+- `services/matcher.py`: an exact tconst match first. Otherwise trigram similarity + popularity boost + year
+  match, returning the top candidates.
+- **Confirm step:** show the best match (title, year, rating, genres, poster). I pick it, or one of the alternatives,
+  and set priority and notes. Only then is it added to the watchlist (`source='manual'`; duplicates rejected).
 - TMDB enrichment: `/find/{imdb_id}?external_source=imdb_id` → poster and overview, cached in the DB.
-*Learn:* entity resolution, fuzzy matching, caching, rate limits.
+- First as a small CLI (`uv run python -m app.cli add "<url or title>"`), then the same service powers Streamlit and the API.
+*Learn:* URL parsing, entity resolution, fuzzy matching, caching, rate limits, keeping logic in a service layer.
 
 ### Phase 3: Streamlit MVP
-At first it calls the services directly. Pages: **Import** (upload export → review matches → confirm),
+At first it calls the services directly. Pages: **Add movie** (paste URL or title → check match → confirm),
 **Watchlist** (poster grid, filters for genre/year/rating/status), **Stats** (genres, decades, ratings).
 *Learn:* fast prototyping, how UI state works.
 
 ### Phase 4: FastAPI
-`GET /movies/search`, `GET/POST/PATCH/DELETE /watchlist`, `POST /import/tabs`, `POST /import/manual`,
+`GET /movies/search`, `GET/POST/PATCH/DELETE /watchlist`, `POST /watchlist/resolve` (URL or title → candidates),
 `GET /stats`. Pydantic schemas, dependency-injected DB sessions, async httpx for TMDB, OpenAPI docs.
 Then switch Streamlit over to calling the API.
 *Learn:* layered architecture, what belongs in the service layer vs. HTTP code, validation.
@@ -114,7 +116,7 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 ## Verification checklist
 - Phase 0: `uv run python -m app.db.session` prints the Postgres version; pgAdmin connects to `localhost:5435`.
 - Phase 1: the loader runs → `SELECT count(*) FROM movies` ≈ 700k in pgAdmin; EXPLAIN shows the trigram index being used.
-- Phase 2: import a real tab export → check the match rate and spot-check the review queue.
+- Phase 2: add a handful of real URLs and titles (IMDb link, Google search, typo'd title) → the right movie is proposed, the duplicate is rejected.
 - Phase 3: `uv run streamlit run ui/streamlit_app.py` shows the poster grid and filters work.
 - Phase 4: `uv run pytest` passes; `/docs` Swagger can do full CRUD.
 - Phase 5: chat asks resolve to correct tool calls on both Ollama and Groq.
@@ -140,7 +142,7 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 ## Decisions log
 | Date | Decision | Why |
 |---|---|---|
-| 2026-10-08 | Import from bulk tab export **and** manual add | Clear the backlog once, then keep adding |
+| 2026-10-08 | ~~Import from bulk tab export and manual add~~ → **manual only, one URL/title at a time** | Changed same day: I want to consciously pick every movie that goes on my watchlist |
 | 2026-10-08 | IMDb TSV dumps + TMDB API | IMDb: free and complete, good for SQL practice. TMDB: posters, plots, cast |
 | 2026-10-08 | Ollama locally, Groq as a switch | Private/free locally; Groq for speed. Learn the provider abstraction |
 | 2026-10-08 | Postgres from day 1 (not SQLite) | pgAdmin already installed; one engine everywhere, pg_trgm + pgvector |
