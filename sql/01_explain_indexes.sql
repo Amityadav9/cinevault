@@ -1,9 +1,17 @@
 -- =====================================================================================
 -- 01 · EXPLAIN & indexes: see *why* a query is fast or slow
 -- =====================================================================================
--- Run in pgAdmin Query Tool. Select one block → F5 (run), or use the toolbar:
---   F7         = Explain           (the plan the planner *would* use, with cost estimates)
---   Shift+F7   = Explain Analyze   (actually runs it: real times and row counts, drawn as a diagram)
+-- Two ways to see a plan in pgAdmin's Query Tool:
+--
+--   1) TEXT plan: highlight a whole "EXPLAIN (ANALYZE, BUFFERS) SELECT …;" or a BEGIN…ROLLBACK
+--      block → F5. The plan appears as rows in "Data Output".
+--
+--   2) DIAGRAM: highlight ONLY the bare "SELECT …;" (no EXPLAIN word, no SET/BEGIN) → toolbar
+--      Explain (E button, F7 = estimate) or Explain Analyze (bar-chart button, Shift+F7 = real run).
+--      An "Explain" tab appears at the bottom → Graphical / Analysis / Statistics.
+--      pgAdmin adds "EXPLAIN (…)" itself, so highlighting EXPLAIN or SET gives a syntax error.
+--      To compare without an index: F5 "SET enable_bitmapscan = off;" → Explain Analyze the
+--      SELECT → F5 "RESET enable_bitmapscan;"
 --
 -- Reading a plan, bottom-up (innermost node runs first):
 --   Seq Scan              read every row of the table
