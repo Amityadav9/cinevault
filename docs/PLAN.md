@@ -21,8 +21,8 @@ Every phase ends with something runnable and a "what I learned / why" note in `d
 
 ## Architecture (end state)
 ```
-Browser tabs export ─┐
-Manual add ──────────┤
+Paste 1 URL / title ─┐
+  (you confirm)      │
                      ▼
               FastAPI backend  ──► Postgres (from day 1; browse in pgAdmin)
                │   ▲                    ▲
