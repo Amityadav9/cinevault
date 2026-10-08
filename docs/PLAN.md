@@ -146,6 +146,9 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-08 | Postgres runs in Docker | Same service gets reused in Phase 6; nothing installed on the host |
 | 2026-10-08 | `pgvector/pgvector:pg18` on port 5435 | Already pulled; PG 18 + vectors for phase 5; 5432-5434 used by other projects |
 | 2026-10-08 | Genres normalized (`genres` + `movie_genres`) and `moods` → `mood_genres` seeded in phase 1 | Pick a movie by mood; good many-to-many SQL practice; moods are editable rows |
+| 2026-10-08 | Adult movies: keep only if IMDb rating ≥ 6.5 (flagged `is_adult`) | Keep the good ones, drop the noise; app can hide or label them. May add a min-votes rule after seeing the data |
+| 2026-10-08 | Schema via Alembic (`0001_initial_schema`); extensions + genre/mood seed inside the migration | Repeatable, reversible DB versions; the migration is a frozen snapshot |
+| 2026-10-08 | Watchlist `status` uses a CHECK constraint, not a PG ENUM | Same safety; adding a status later is a trivial migration |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |
