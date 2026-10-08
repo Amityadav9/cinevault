@@ -12,8 +12,8 @@ Every phase ends with something runnable and a "what I learned / why" note in `d
 
 ## Progress
 - [x] **Phase 0: Setup** (uv, git, config, Postgres in Docker, pgAdmin): done 2026-10-08, see [phase-0.md](phase-0.md)
-- [ ] **Phase 1: Data and SQL** (IMDb ETL into Postgres, schema, queries, indexes): *next*
-- [ ] **Phase 2: Import pipeline** (browser tabs + manual add → matched movies, TMDB enrichment)
+- [x] **Phase 1: Data and SQL** (IMDb ETL into Postgres, schema, queries, indexes): done 2026-10-08, see [phase-1.md](phase-1.md)
+- [ ] **Phase 2: Import pipeline** (browser tabs + manual add → matched movies, TMDB enrichment): *next*
 - [ ] **Phase 3: Streamlit MVP** (import review, poster grid, stats)
 - [ ] **Phase 4: FastAPI** (REST API, Streamlit switched to call it)
 - [ ] **Phase 5: LLM chatbot** (Ollama/Groq, tool calling over the services)
@@ -48,6 +48,7 @@ movies_collection/
     llm/                  # provider.py (Ollama/Groq), tools.py, agent.py
   ui/streamlit_app.py
   tests/
+  sql/                  # 01_explain_indexes.sql, 02_practice_queries.sql (pgAdmin exercises)
   docs/PLAN.md, docs/phase-*.md
 ```
 
@@ -151,6 +152,8 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-08 | Watchlist `status` uses a CHECK constraint, not a PG ENUM | Same safety; adding a status later is a trivial migration |
 | 2026-10-08 | Loader = COPY into TEMP staging tables → SQL upsert, one transaction | Fast bulk load (~30 s); bad values can't break real tables; safe to re-run; never deletes (watchlist references movies) |
 | 2026-10-08 | Keep unrated / obscure movies (54% have no rating) | Better matching of tab titles in phase 2; browse views filter by `num_votes` instead |
+| 2026-10-08 | Matcher ranking = trigram similarity + 0.05·log10(votes+1) | Plain similarity ranked "Interstella" (no votes) above "Interstellar" (2.6M); the log boost fixes it without swamping text match |
+| 2026-10-08 | Index `ratings.num_votes` (migration 0002) | Popularity filter in nearly every browse view; measured 8.4 → 3.1 ms |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |

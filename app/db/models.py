@@ -77,6 +77,9 @@ class Rating(Base):
 
     movie: Mapped[Movie] = relationship(back_populates="rating")
 
+    # "Popular movies only" (num_votes >= N) is a filter in nearly every browse view.
+    __table_args__ = (Index("ix_ratings_num_votes", "num_votes"),)
+
 
 class Genre(Base):
     __tablename__ = "genres"
