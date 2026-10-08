@@ -63,7 +63,8 @@ Get a TMDB API token.
 Download IMDb `title.basics`, `title.ratings` (and optionally `title.crew`, `name.basics`).
 Filter to movies (titleType=movie, ~700k rows) and bulk-load them with Postgres `COPY` (psycopg 3),
 with the schema managed by SQLAlchemy 2.0 + Alembic. Add a `pg_trgm` index for fuzzy title search.
-Schema: `movies` (tconst PK, title, year, runtime, genres), `ratings`,
+Schema: `movies` (tconst PK, title, year, runtime), `genres` + `movie_genres` (many-to-many),
+`moods` + `mood_genres` (e.g. "Feel-good" → Comedy, Family…; editable), `ratings`,
 `watchlist` (movie_id, status: to_watch/watched/dropped, priority, source, added_at, notes, my_rating),
 `tmdb_cache` (poster_path, overview, cast JSON).
 Practice SQL in pgAdmin: joins, window functions (top-rated per genre), EXPLAIN plans.
@@ -144,4 +145,7 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-08 | Postgres from day 1 (not SQLite) | pgAdmin already installed; one engine everywhere, pg_trgm + pgvector |
 | 2026-10-08 | Postgres runs in Docker | Same service gets reused in Phase 6; nothing installed on the host |
 | 2026-10-08 | `pgvector/pgvector:pg18` on port 5435 | Already pulled; PG 18 + vectors for phase 5; 5432-5434 used by other projects |
+| 2026-10-08 | Genres normalized (`genres` + `movie_genres`) and `moods` → `mood_genres` seeded in phase 1 | Pick a movie by mood; good many-to-many SQL practice; moods are editable rows |
+| 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
+| 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |
