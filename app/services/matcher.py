@@ -60,9 +60,10 @@ WITH hits AS (
     SELECT h.tconst, max(h.sim) AS sim
     FROM unnest(CAST(:queries AS text[])) AS q(q)
     CROSS JOIN LATERAL (
-        SELECT tconst, similarity(title, q.q) AS sim
+        -- both sides lowercase + accent-free: "amelie" matches "Amélie"
+        SELECT tconst, similarity(title_search, lower(f_unaccent(q.q))) AS sim
         FROM movies
-        WHERE title % q.q
+        WHERE title_search % lower(f_unaccent(q.q))
     ) h
     GROUP BY h.tconst
 )

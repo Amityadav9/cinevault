@@ -72,6 +72,13 @@ def test_candidates_are_ranked_and_complete(session):
     assert "Sci-Fi" in best.genres and best.num_votes > 1_000_000
 
 
-@pytest.mark.xfail(reason="accents: 'amelie' ≠ 'Amélie' for trigrams; needs unaccent", strict=True)
-def test_accents_are_ignored(session):
-    assert top(session, "amelie") == "tt0211915"  # Amélie (2001)
+@pytest.mark.parametrize(
+    ("user_input", "tconst"),
+    [
+        ("amelie", "tt0211915"),  # Amélie (2001)
+        ("leon the professional", "tt0110413"),  # Léon: The Professional
+        ("AMÉLIE", "tt0211915"),  # accents/case on the input side too
+    ],
+)
+def test_accents_and_case_are_ignored(session, user_input, tconst):
+    assert top(session, user_input) == tconst

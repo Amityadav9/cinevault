@@ -22,8 +22,8 @@
 --
 -- Measured on this DB (750k movies, 345k ratings):
 --   A  popular movies, sorted     8.4 ms → 3.1 ms with index   (small table: modest gain)
---   B  fuzzy title % '...'         331 ms →  25 ms  trigram index (~13x)
---   C  title ILIKE '%godfather%'    59 ms → 5.8 ms  trigram index (~10x)
+--   B  fuzzy title_search % '..'       331 ms →  25 ms  trigram index (~13x)
+--   C  title_search ILIKE '%godf%'   59 ms → 5.8 ms  trigram index (~10x)
 -- =====================================================================================
 
 
@@ -66,26 +66,26 @@ ROLLBACK;   -- index gone again; check: \d ratings  (or pgAdmin → ratings → 
 
 
 -- -------------------------------------------------------------------------------------
--- B. Trigram (pg_trgm) GIN index on movies.title: fuzzy search
+-- B. Trigram (pg_trgm) GIN index on movies.title_search (lowercase, accent-free): fuzzy search
 -- -------------------------------------------------------------------------------------
 
--- B1: with the index → "Bitmap Index Scan on ix_movies_title_trgm"
+-- B1: with the index → "Bitmap Index Scan on ix_movies_title_search_trgm"
 -- Note "Rows Removed by Index Recheck": the index returns *candidates* sharing trigrams,
 -- then Postgres re-checks the real similarity on each one (a "lossy" index).
 EXPLAIN (ANALYZE, BUFFERS)
-SELECT title FROM movies WHERE title % 'intersteller';
+SELECT title FROM movies WHERE title_search % 'intersteller';
 
 -- B2: pretend the index doesn't exist (SET LOCAL lasts only until ROLLBACK)
 BEGIN;
 SET LOCAL enable_bitmapscan = off;
 SET LOCAL enable_indexscan = off;
 EXPLAIN (ANALYZE, BUFFERS)
-SELECT title FROM movies WHERE title % 'intersteller';   -- Parallel Seq Scan, ~13x slower
+SELECT title FROM movies WHERE title_search % 'intersteller';   -- Parallel Seq Scan, ~13x slower
 ROLLBACK;
 
 -- B3: the similarity threshold behind %  (default 0.3). Lower = more (worse) matches.
 SHOW pg_trgm.similarity_threshold;
-SELECT title, similarity(title, 'intersteller') FROM movies WHERE title % 'intersteller'
+SELECT title, similarity(title_search, 'intersteller') FROM movies WHERE title_search % 'intersteller'
 ORDER BY 2 DESC LIMIT 10;
 
 
@@ -95,12 +95,12 @@ ORDER BY 2 DESC LIMIT 10;
 -- A normal B-tree index can only help with a *prefix* ('godfather%'), never a leading
 -- wildcard ('%godfather%'). The trigram index can.
 
-EXPLAIN ANALYZE SELECT title, year FROM movies WHERE title ILIKE '%godfather%';
+EXPLAIN ANALYZE SELECT title, year FROM movies WHERE title_search ILIKE '%godfather%';
 
 BEGIN;
 SET LOCAL enable_bitmapscan = off;
 SET LOCAL enable_indexscan = off;
-EXPLAIN ANALYZE SELECT title, year FROM movies WHERE title ILIKE '%godfather%';
+EXPLAIN ANALYZE SELECT title, year FROM movies WHERE title_search ILIKE '%godfather%';
 ROLLBACK;
 
 

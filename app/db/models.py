@@ -10,6 +10,7 @@ from typing import Any
 
 from sqlalchemy import (
     CheckConstraint,
+    Computed,
     ForeignKey,
     Index,
     Integer,
@@ -49,18 +50,23 @@ class Movie(Base):
     year: Mapped[int | None] = mapped_column(SmallInteger)
     runtime_min: Mapped[int | None] = mapped_column(Integer)
     is_adult: Mapped[bool] = mapped_column(default=False, server_default="false")
+    # Lowercase, accent-free copy of title ("Amélie" → "amelie"), computed by Postgres itself.
+    # f_unaccent is an IMMUTABLE wrapper around unaccent() (see migration 0003).
+    title_search: Mapped[str | None] = mapped_column(
+        Text, Computed("lower(f_unaccent(title))", persisted=True)
+    )
 
     rating: Mapped["Rating | None"] = relationship(back_populates="movie")
     genres: Mapped[list["Genre"]] = relationship(secondary="movie_genres", back_populates="movies")
 
     __table_args__ = (
-        # Trigram GIN index: fast fuzzy search, e.g. WHERE title % 'intersteller'.
-        # Needs the pg_trgm extension (created in the migration).
+        # Trigram GIN index: fast fuzzy search, e.g. WHERE title_search % 'intersteller'.
+        # Needs the pg_trgm extension (created in migration 0001).
         Index(
-            "ix_movies_title_trgm",
-            "title",
+            "ix_movies_title_search_trgm",
+            "title_search",
             postgresql_using="gin",
-            postgresql_ops={"title": "gin_trgm_ops"},
+            postgresql_ops={"title_search": "gin_trgm_ops"},
         ),
         Index("ix_movies_year", "year"),
     )
