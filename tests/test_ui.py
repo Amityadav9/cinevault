@@ -55,3 +55,11 @@ def test_add_page_previews_without_saving(db_ready):
     assert not at.exception
     assert any(m.value == "### The Highwaymen (2019)" for m in at.markdown)
     assert any("Can't read this line" in w.value for w in at.warning)
+
+
+def test_stats_page_renders(db_ready):
+    at = AppTest.from_file(str(UI / "views/stats.py"), default_timeout=60).run()
+    assert not at.exception
+    labels = [m.label for m in at.metric]
+    if labels:  # empty watchlist → info message instead of metrics
+        assert labels == ["To watch", "Hours left", "Watched", "Your avg rating"]
