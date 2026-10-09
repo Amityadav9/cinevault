@@ -102,3 +102,18 @@ def test_commit_inside_code_is_still_rolled_back(db):
     watchlist.add(db, INTERSTELLAR)
     db.commit()
     assert watchlist.find(db, "interstellar").tconst == INTERSTELLAR
+
+
+def test_set_priority(db):
+    item = watchlist.add(db, INTERSTELLAR, priority=3)
+    assert watchlist.set_priority(db, item, 1).priority == 1
+    with pytest.raises(watchlist.WatchlistError):
+        watchlist.set_priority(db, item, 9)
+
+
+def test_back_to_watch_clears_watched_date(db):
+    item = watchlist.add(db, INTERSTELLAR)
+    watchlist.mark_watched(db, item, 8)
+    watchlist.set_status(db, item, "to_watch")
+    assert item.status == "to_watch" and item.watched_at is None
+    assert float(item.my_rating) == 8  # your rating is kept, in case you re-watch

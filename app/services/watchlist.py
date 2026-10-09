@@ -109,6 +109,16 @@ def set_status(session: Session, item: WatchlistItem, status: str) -> WatchlistI
     if status not in WATCH_STATUSES:
         raise WatchlistError(f"status must be one of {', '.join(WATCH_STATUSES)}")
     item.status = status
+    if status != "watched":
+        item.watched_at = None  # "back to to-watch" must not keep a watched date
+    session.flush()
+    return item
+
+
+def set_priority(session: Session, item: WatchlistItem, priority: int) -> WatchlistItem:
+    if not 1 <= priority <= 5:
+        raise WatchlistError("priority must be between 1 (top) and 5")
+    item.priority = priority
     session.flush()
     return item
 

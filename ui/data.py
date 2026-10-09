@@ -158,3 +158,32 @@ def add_movie(tconst: str, priority: int, notes: str | None) -> None:
     with SessionLocal() as session:
         watchlist.add(session, tconst, priority=priority, notes=notes, source="streamlit")
         session.commit()
+
+
+# --- Watchlist actions (card buttons) -------------------------------------------------------
+# Each action = one short transaction. The item is looked up by IMDb id, and
+# watchlist.find accepts "tt…" ids directly.
+
+
+def mark_watched(tconst: str, my_rating: float | None) -> None:
+    with SessionLocal() as session:
+        watchlist.mark_watched(session, watchlist.find(session, tconst), my_rating)
+        session.commit()
+
+
+def set_status(tconst: str, status: str) -> None:
+    with SessionLocal() as session:
+        watchlist.set_status(session, watchlist.find(session, tconst), status)
+        session.commit()
+
+
+def set_priority(tconst: str, priority: int) -> None:
+    with SessionLocal() as session:
+        watchlist.set_priority(session, watchlist.find(session, tconst), priority)
+        session.commit()
+
+
+def remove_movie(tconst: str) -> None:
+    with SessionLocal() as session:
+        watchlist.remove(session, watchlist.find(session, tconst))
+        session.commit()
