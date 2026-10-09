@@ -14,8 +14,8 @@ Every phase ends with something runnable and a "what I learned / why" note in `d
 - [x] **Phase 0: Setup** (uv, git, config, Postgres in Docker, pgAdmin): done 2026-10-08, see [phase-0.md](phase-0.md)
 - [x] **Phase 1: Data and SQL** (IMDb ETL into Postgres, schema, queries, indexes): done 2026-10-08, see [phase-1.md](phase-1.md)
 - [x] **Phase 2: Add movies one by one** (paste URL or title → match → confirm → watchlist, TMDB enrichment): done 2026-10-09, see [phase-2.md](phase-2.md)
-- [ ] **Phase 3: Streamlit MVP** (add page, poster grid, mood picker, stats): *next*
-- [ ] **Phase 4: FastAPI** (REST API, Streamlit switched to call it)
+- [x] **Phase 3: Streamlit MVP** (add page, poster grid, mood picker, trailers, card actions, stats): done 2026-10-09, see [phase-3.md](phase-3.md)
+- [ ] **Phase 4: FastAPI** (REST API, Streamlit switched to call it): *next*
 - [ ] **Phase 5: LLM chatbot** (Ollama/Groq, tool calling over the services)
 - [ ] **Phase 6: Docker and production** (full compose stack, tests, CI)
 
