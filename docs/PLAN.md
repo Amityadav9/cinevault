@@ -156,6 +156,8 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-08 | Keep unrated / obscure movies (54% have no rating) | Better matching of tab titles in phase 2; browse views filter by `num_votes` instead |
 | 2026-10-08 | Matcher ranking = trigram similarity + 0.05·log10(votes+1) | Plain similarity ranked "Interstella" (no votes) above "Interstellar" (2.6M); the log boost fixes it without swamping text match |
 | 2026-10-08 | Index `ratings.num_votes` (migration 0002) | Popularity filter in nearly every browse view; measured 8.4 → 3.1 ms |
+| 2026-10-09 | Matcher score = similarity + 0.05·log10(votes+1) + year bonus (0.30 exact, 0.15 ±1); tries both query variants | Year picks between remakes (Dune 1984 vs 2021); "Bee Movie" needs the un-stripped variant |
+| 2026-10-09 | Known gap: accents ("amelie" ≠ "Amélie"), tracked as an xfail test | Fix with `unaccent` + an accent-free indexed title column |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |
