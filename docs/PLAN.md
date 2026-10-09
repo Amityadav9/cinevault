@@ -137,6 +137,9 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
   `/var/lib/postgresql/18/docker`, so the volume is mounted at `/var/lib/postgresql` (not `.../data` as in ≤17).
 - conda `base` is auto-activated in the shell, so uv warns `VIRTUAL_ENV ... will be ignored`. That's harmless:
   uv uses `.venv` anyway. To silence it: `conda config --set auto_activate_base false`.
+- TMDB API: free Developer plan, token = **API Read Access Token** (`eyJ…`, sent as `Authorization: Bearer`)
+  in `.env` as `TMDB_TOKEN`. The sign-up form fails with a vague "There was a problem" if Application URL is
+  `http://localhost…`, so use the GitHub profile URL. ✅ Verified 2026-10-09.
 - pgAdmin is installed on Windows. Connect to host `localhost`, port **5435**, user/password/db `cinevault`.
 
 ## Decisions log
