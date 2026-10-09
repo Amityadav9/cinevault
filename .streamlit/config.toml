@@ -1,0 +1,6 @@
+[server]
+headless = true          # don't try to open a browser (WSL can't); skips the first-run email prompt
+runOnSave = true         # reload the page when a .py file changes
+
+[browser]
+gatherUsageStats = false

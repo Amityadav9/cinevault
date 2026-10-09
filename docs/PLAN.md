@@ -47,7 +47,9 @@ movies_collection/
     api/                  # FastAPI routers: movies, watchlist, import, chat
     llm/                  # provider.py (Ollama/Groq), tools.py, agent.py
     cli.py                # terminal: search / add / list / watched / remove (Typer + Rich)
-  ui/streamlit_app.py
+  ui/app.py               # Streamlit entry (navigation + DB/schema guard)
+  ui/views/*.py           # one file per page
+  ui/data.py              # services → display-ready dataclasses for pages
   tests/
   sql/                  # 01_explain_indexes.sql, 02_practice_queries.sql (pgAdmin exercises)
   docs/PLAN.md, docs/phase-*.md
@@ -118,7 +120,7 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 - Phase 0: `uv run python -m app.db.session` prints the Postgres version; pgAdmin connects to `localhost:5435`.
 - Phase 1: the loader runs → `SELECT count(*) FROM movies` ≈ 700k in pgAdmin; EXPLAIN shows the trigram index being used.
 - Phase 2: add a handful of real URLs and titles (IMDb link, Google search, typo'd title) → the right movie is proposed, the duplicate is rejected.
-- Phase 3: `uv run streamlit run ui/streamlit_app.py` shows the poster grid and filters work.
+- Phase 3: `uv run streamlit run ui/app.py` shows the poster grid and filters work.
 - Phase 4: `uv run pytest` passes; `/docs` Swagger can do full CRUD.
 - Phase 5: chat asks resolve to correct tool calls on both Ollama and Groq.
 - Phase 6: a fresh `docker compose up` runs the whole stack.
@@ -167,6 +169,8 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-09 | TMDB enrichment: /find (IMDb→TMDB id) + /movie?append_to_response=credits, cached in `tmdb_cache` (+tagline, director: migration 0004); misses cached too | 2 calls per movie, ever; adding never fails because TMDB is down |
 | 2026-10-09 | CLI `add` without argument = paste loop | Pasted text never goes through bash, so no quoting problems with `&` in URLs |
 | 2026-10-09 | TMDB tests use a fake server (`httpx.MockTransport`) | No network, no quota; can simulate 401 / 429 |
+| 2026-10-09 | Project is an installable package (hatchling; `app` + `ui`), installed editable by uv | `import app` works from Streamlit (runs from ui/), scripts, anywhere |
+| 2026-10-09 | Streamlit: `st.navigation` + `ui/views/`, pages get frozen dataclasses from `ui/data.py`; watchlist not cached, moods/genres cached 10 min | Pages stay simple; fresh data after CLI changes; AppTest smoke tests |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |
