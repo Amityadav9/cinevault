@@ -97,13 +97,19 @@ At first it calls the services directly. Pages: **Add movie** (paste URL or titl
 Then switch Streamlit over to calling the API.
 *Learn:* layered architecture, what belongs in the service layer vs. HTTP code, validation.
 
-### Phase 5: LLM chatbot with tool calling
-`llm/provider.py` puts one interface in front of **Ollama** (local `qwen3.5`) and **Groq**. Switch with `LLM_PROVIDER=ollama|groq`.
-Tools wrap the existing services: `search_watchlist(filters)`, `add_movie(title)`,
-`mark_watched(id, rating)`, `recommend_from_watchlist(mood, max_runtime)`, `get_stats()`.
-`POST /chat` (streaming) plus a Streamlit chat page.
-Optional: embeddings (`nomic-embed-text`) over plot overviews in pgvector for "movies like X".
-*Learn:* function calling, the agent loop, provider abstraction, guarding tool inputs.
+### Phase 5: Movie assistant (Agno agent + RAG + memory)
+Stack: **Agno 2.x** (Agent + Knowledge + Memory), **Groq** by default (Llama 4 Scout; Qwen3-32B and
+GPT-OSS-120B selectable; exact model ids checked at build time), **Ollama** local models (`qwen3.5`)
+as the offline fallback, embeddings with Ollama **nomic-embed-text-v2-moe** (multilingual, local),
+vectors in our **Postgres + pgvector** (already enabled in migration 0001), UI in Streamlit.
+- **Tools** = the existing services: search/add movies, list & filter the watchlist (mood, runtime,
+  genre), mark watched with rating, stats. The agent never writes SQL itself.
+- **Knowledge (RAG)**: embeddings of plot + tagline + genres per movie, for "like Interstellar but
+  lighter" and mood questions that genres alone answer badly.
+- **Memory**: my taste over time ("no horror", "loves Nolan"), stored in Postgres.
+- Streamlit chat page; later `POST /chat` (streaming) on the API.
+*Learn:* agents and tool calling, RAG (chunking, embeddings, vector search), memory, provider fallback,
+guarding tool inputs.
 
 ### Phase 6: Docker and production
 Dockerfiles for the API and the UI (uv image pattern, `uv sync --frozen`), and a compose file with db, api, ui, and ollama.
@@ -178,6 +184,11 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-09 | Card actions in a per-card `st.popover`, all via `on_click`/`on_change` callbacks; Remove needs a confirm checkbox; back-to-to-watch clears `watched_at` but keeps my rating | Callbacks run before the re-run, so the page shows the new state immediately; no accidental deletes |
 | 2026-10-09 | TMDB videos requested with `include_video_language` (en, untagged, Indian + major languages); YouTube search link when TMDB has no trailer | Default request hides non-English trailers; some films (e.g. Vaaranam Aayiram) have no TMDB video at all |
 | 2026-10-09 | Stats page: KPI row + single-series Altair charts in one validated accent hue (light/dark step), integer count axes, tooltips, table view per chart | Dataviz method: form first, validated color, thin marks, no legend for one series, never color-only |
+| 2026-10-09 | DB port bound to `127.0.0.1` only | Not reachable from other devices on the network; WSL + Windows pgAdmin still work |
+| 2026-10-09 | No `requirements.txt`: `pyproject.toml` + `uv.lock` (`uv export` if ever needed) | Lockfile pins the full dependency tree; one source of truth |
+| 2026-10-09 | Public GitHub repo: no secrets/personal data in files or history; commits authored with GitHub noreply email | `.env` never committed; history rewritten before the first push |
+| 2026-10-09 | Order: FastAPI (phase 4) before the chatbot (phase 5); chatbot stack = Agno 2.x + Groq/Ollama + nomic embeddings + pgvector; no pymupdf | Chat can be exposed as `/chat`; no PDFs in this app |
+| 2026-10-09 | Obsidian optional: open `docs/` as a vault; `.obsidian/` git-ignored | Markdown docs work as notes; app doesn't depend on it |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |
