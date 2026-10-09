@@ -44,3 +44,14 @@ def test_mood_filter_never_shows_more(watchlist_page, mood):
     assert not watchlist_page.exception
     shown = int(watchlist_page.metric[0].value) if watchlist_page.metric else 0
     assert shown <= before
+
+
+def test_add_page_previews_without_saving(db_ready):
+    # The Highwaymen: already TMDB-cached locally → no API call. We never click "Add".
+    at = AppTest.from_file(str(UI / "views/add.py"), default_timeout=60).run()
+    at.text_area(key="add_input").input(
+        "https://www.imdb.com/title/tt1860242/\nhttps://www.google.com/"
+    ).run()
+    assert not at.exception
+    assert any(m.value == "### The Highwaymen (2019)" for m in at.markdown)
+    assert any("Can't read this line" in w.value for w in at.warning)

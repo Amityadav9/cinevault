@@ -11,9 +11,11 @@ from decimal import Decimal
 import streamlit as st
 from sqlalchemy import select
 
-from app.db.models import TmdbCache
+from app.db.models import TmdbCache, WatchlistItem
 from app.db.session import SessionLocal
-from app.services import catalog, watchlist
+from app.services import catalog, tmdb, watchlist
+from app.services.matcher import Candidate, find_candidates
+from app.services.parse_input import parse_input
 from app.services.tmdb import poster_url, youtube_url
 
 
@@ -94,3 +96,65 @@ def load_moods() -> list[catalog.MoodInfo]:
 def load_genres() -> list[str]:
     with SessionLocal() as session:
         return catalog.list_genres(session)
+
+
+# --- Add page -----------------------------------------------------------------------------
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def search(user_input: str) -> list[Candidate]:
+    """Parse + match one pasted line. Cached: sliders/re-runs don't repeat the query.
+
+    Raises UnparseableInput for junk; st.cache_data doesn't cache exceptions.
+    """
+    parsed = parse_input(user_input)
+    with SessionLocal() as session:
+        return find_candidates(session, parsed)
+
+
+@dataclass(frozen=True)
+class Preview:
+    poster: str | None
+    tagline: str | None
+    overview: str | None
+    director: str | None
+    cast: tuple[str, ...]
+    trailer_url: str | None
+    error: str | None = None  # TMDB problem: shown as a hint, adding still works
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def preview(tconst: str) -> Preview:
+    """TMDB details for any movie (cached in tmdb_cache too: max 2 API calls per movie, ever)."""
+    with SessionLocal() as session:
+        try:
+            client = tmdb.TmdbClient()
+            try:
+                d = tmdb.enrich(session, tconst, client)
+            finally:
+                client.close()
+            session.commit()
+        except tmdb.TmdbError as e:
+            return Preview(None, None, None, None, (), None, error=str(e))
+        return Preview(
+            poster=poster_url(d.poster_path),
+            tagline=d.tagline,
+            overview=d.overview,
+            director=d.director,
+            cast=tuple(c["name"] for c in (d.cast or [])[:4]),
+            trailer_url=youtube_url(d.trailer_key),
+        )
+
+
+def watchlist_status(tconst: str) -> str | None:
+    """'to_watch' / 'watched' / 'dropped' if already on the list, else None. Not cached."""
+    with SessionLocal() as session:
+        item = session.scalars(select(WatchlistItem).where(WatchlistItem.tconst == tconst)).first()
+        return item.status if item else None
+
+
+def add_movie(tconst: str, priority: int, notes: str | None) -> None:
+    """Raises watchlist.WatchlistError (e.g. AlreadyOnWatchlist) with a user-facing message."""
+    with SessionLocal() as session:
+        watchlist.add(session, tconst, priority=priority, notes=notes, source="streamlit")
+        session.commit()

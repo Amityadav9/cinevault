@@ -22,5 +22,6 @@ if current != head:
 
 pages = [
     st.Page("views/watchlist.py", title="Watchlist", icon="🎬", default=True),
+    st.Page("views/add.py", title="Add movies", icon="➕"),
 ]
 st.navigation(pages).run()
