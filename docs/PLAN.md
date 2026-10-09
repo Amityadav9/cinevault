@@ -46,6 +46,7 @@ movies_collection/
     services/parse_input.py  # URL or title → IMDb id or search text (+year)
     api/                  # FastAPI routers: movies, watchlist, import, chat
     llm/                  # provider.py (Ollama/Groq), tools.py, agent.py
+    cli.py                # terminal: search / add / list / watched / remove (Typer + Rich)
   ui/streamlit_app.py
   tests/
   sql/                  # 01_explain_indexes.sql, 02_practice_queries.sql (pgAdmin exercises)
@@ -161,6 +162,8 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-08 | Index `ratings.num_votes` (migration 0002) | Popularity filter in nearly every browse view; measured 8.4 → 3.1 ms |
 | 2026-10-09 | Matcher score = similarity + 0.05·log10(votes+1) + year bonus (0.30 exact, 0.15 ±1); tries both query variants | Year picks between remakes (Dune 1984 vs 2021); "Bee Movie" needs the un-stripped variant |
 | 2026-10-09 | Accent/case-insensitive search: `title_search = lower(f_unaccent(title))` STORED generated column + trigram index (migration 0003); old title index dropped | "amelie" now finds "Amélie"; `f_unaccent` is an IMMUTABLE wrapper because indexes need immutable functions |
+| 2026-10-09 | Services change data but never commit; callers own the transaction (unit of work) | CLI commits after the user confirms; tests roll back; same services reused by Streamlit/API/chatbot |
+| 2026-10-09 | Tests use a rolled-back transaction (`tests/conftest.py`, `join_transaction_mode="create_savepoint"`) | Real watchlist is never touched by tests, even when code calls `commit()` |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |

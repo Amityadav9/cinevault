@@ -1,30 +1,16 @@
 """Integration tests: run the matcher against the real loaded database.
 
-Skipped automatically if Postgres isn't reachable or the IMDb data isn't loaded.
+Uses the `db` fixture (tests/conftest.py): skipped if the DB is down, always rolled back.
 """
 
 import pytest
-from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
 
-from app.db.session import SessionLocal
 from app.services.matcher import find_candidates
 from app.services.parse_input import parse_input
 
 
-@pytest.fixture(scope="module")
-def session():
-    try:
-        with SessionLocal() as s:
-            if s.execute(text("SELECT count(*) FROM movies")).scalar_one() < 100_000:
-                pytest.skip("IMDb data not loaded (run app.etl.imdb_loader)")
-            yield s
-    except OperationalError:
-        pytest.skip("database not reachable (docker compose up -d db)")
-
-
-def top(session, user_input: str) -> str:
-    candidates = find_candidates(session, parse_input(user_input))
+def top(db, user_input: str) -> str:
+    candidates = find_candidates(db, parse_input(user_input))
     assert candidates, f"no match for {user_input!r}"
     return candidates[0].tconst
 
@@ -54,17 +40,17 @@ def top(session, user_input: str) -> str:
         ("https://letterboxd.com/film/dune-part-two/", "tt15239678"),
     ],
 )
-def test_best_match(session, user_input, tconst):
-    assert top(session, user_input) == tconst
+def test_best_match(db, user_input, tconst):
+    assert top(db, user_input) == tconst
 
 
-def test_tv_series_id_is_not_a_movie(session):
+def test_tv_series_id_is_not_a_movie(db):
     # Breaking Bad: valid IMDb id, but we only load movies
-    assert find_candidates(session, parse_input("https://www.imdb.com/title/tt0903747/")) == []
+    assert find_candidates(db, parse_input("https://www.imdb.com/title/tt0903747/")) == []
 
 
-def test_candidates_are_ranked_and_complete(session):
-    candidates = find_candidates(session, parse_input("intersteller 2014"), limit=5)
+def test_candidates_are_ranked_and_complete(db):
+    candidates = find_candidates(db, parse_input("intersteller 2014"), limit=5)
     assert len(candidates) == 5
     assert [c.score for c in candidates] == sorted((c.score for c in candidates), reverse=True)
     best = candidates[0]
@@ -80,5 +66,5 @@ def test_candidates_are_ranked_and_complete(session):
         ("AMÉLIE", "tt0211915"),  # accents/case on the input side too
     ],
 )
-def test_accents_and_case_are_ignored(session, user_input, tconst):
-    assert top(session, user_input) == tconst
+def test_accents_and_case_are_ignored(db, user_input, tconst):
+    assert top(db, user_input) == tconst
