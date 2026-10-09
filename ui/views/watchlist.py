@@ -185,7 +185,10 @@ def show_details(c: Card) -> None:
         elif c.poster:
             st.image(c.poster, width=260)
         else:
-            st.caption("No trailer or poster found on TMDB.")
+            st.caption("No poster on TMDB.")
+        if not c.trailer_url:
+            st.caption("TMDB has no trailer for this movie.")
+            st.link_button("🔎 Search trailer on YouTube", c.trailer_search_url)
     with right:
         votes = f" ({c.num_votes:,} votes)" if c.num_votes else ""
         st.markdown(f"**★ {c.imdb_rating or '–'}**{votes}")
@@ -204,6 +207,8 @@ def show_details(c: Card) -> None:
     links = f"[IMDb ↗]({c.imdb_url})"
     if c.trailer_url:
         links += f" · [Trailer on YouTube ↗]({c.trailer_url})"
+    else:
+        links += f" · [🔎 Search trailer ↗]({c.trailer_search_url})"
     st.caption(links)
 
 

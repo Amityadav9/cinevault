@@ -10,6 +10,7 @@ Docs: https://developer.themoviedb.org/reference/find-by-id
 import time
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 from sqlalchemy.orm import Session
@@ -20,6 +21,8 @@ from app.db.models import TmdbCache
 BASE_URL = "https://api.themoviedb.org/3"
 IMAGE_BASE = "https://image.tmdb.org/t/p"
 TOP_CAST = 8
+# Video languages to request ("null" = untagged). pick_trailer still prefers English.
+VIDEO_LANGUAGES = "en,null,ta,te,hi,ml,kn,de,fr,es,it,ja,ko,zh"
 
 
 class TmdbError(Exception):
@@ -66,8 +69,13 @@ class TmdbClient:
         return results[0]["id"] if results else None
 
     def movie_details(self, tmdb_id: int) -> dict[str, Any]:
-        # details + cast/crew + videos in ONE request
-        return self._get(f"/movie/{tmdb_id}", append_to_response="credits,videos")
+        # details + cast/crew + videos in ONE request. Without include_video_language TMDB
+        # only returns English/untagged videos, hiding e.g. a Tamil film's Tamil trailer.
+        return self._get(
+            f"/movie/{tmdb_id}",
+            append_to_response="credits,videos",
+            include_video_language=VIDEO_LANGUAGES,
+        )
 
     def close(self) -> None:
         self._http.close()
@@ -75,6 +83,12 @@ class TmdbClient:
 
 def youtube_url(trailer_key: str | None) -> str | None:
     return f"https://www.youtube.com/watch?v={trailer_key}" if trailer_key else None
+
+
+def youtube_search_url(title: str, year: int | None) -> str:
+    """Fallback when TMDB has no trailer: a YouTube search for '<title> <year> trailer'."""
+    query = " ".join(str(x) for x in (title, year, "trailer") if x)
+    return f"https://www.youtube.com/results?{urlencode({'search_query': query})}"
 
 
 def pick_trailer(videos: list[dict[str, Any]]) -> str | None:

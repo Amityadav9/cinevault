@@ -176,6 +176,7 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-09 | Streamlit Add page: paste one or many lines, each line its own box with match picker + preview + its own Add button | Fast for many saved URLs, but every movie is still confirmed individually |
 | 2026-10-09 | No async in Streamlit / services for now | Streamlit reruns synchronously; nothing to parallelise yet. Async belongs in FastAPI (phase 4) |
 | 2026-10-09 | Card actions in a per-card `st.popover`, all via `on_click`/`on_change` callbacks; Remove needs a confirm checkbox; back-to-to-watch clears `watched_at` but keeps my rating | Callbacks run before the re-run, so the page shows the new state immediately; no accidental deletes |
+| 2026-10-09 | TMDB videos requested with `include_video_language` (en, untagged, Indian + major languages); YouTube search link when TMDB has no trailer | Default request hides non-English trailers; some films (e.g. Vaaranam Aayiram) have no TMDB video at all |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |

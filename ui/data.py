@@ -16,7 +16,7 @@ from app.db.session import SessionLocal
 from app.services import catalog, tmdb, watchlist
 from app.services.matcher import Candidate, find_candidates
 from app.services.parse_input import parse_input
-from app.services.tmdb import poster_url, youtube_url
+from app.services.tmdb import poster_url, youtube_search_url, youtube_url
 
 
 @dataclass(frozen=True)
@@ -44,6 +44,10 @@ class Card:
     @property
     def imdb_url(self) -> str:
         return f"https://www.imdb.com/title/{self.tconst}/"
+
+    @property
+    def trailer_search_url(self) -> str:
+        return youtube_search_url(self.title, self.year)
 
 
 def load_cards(status: str | None) -> list[Card]:

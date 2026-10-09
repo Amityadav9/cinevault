@@ -8,6 +8,7 @@ import hashlib
 import streamlit as st
 
 from app.services.parse_input import UnparseableInput
+from app.services.tmdb import youtube_search_url
 from app.services.watchlist import WatchlistError
 from ui.data import add_movie, preview, search, watchlist_status
 
@@ -112,6 +113,10 @@ for line in lines:
             links = f"[IMDb ↗]({chosen.imdb_url})"
             if p.trailer_url:
                 links += f" · [▶ Trailer ↗]({p.trailer_url})"
+            else:
+                links += (
+                    f" · [🔎 Search trailer ↗]({youtube_search_url(chosen.title, chosen.year)})"
+                )
             st.caption(links)
             if p.error:
                 st.caption(f"⚠️ No TMDB details: {p.error}")

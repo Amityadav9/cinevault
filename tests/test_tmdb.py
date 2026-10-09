@@ -53,6 +53,7 @@ class FakeTmdb:
             return httpx.Response(200, json={"movie_results": []})
         if request.url.path == "/3/movie/157336":
             assert request.url.params["append_to_response"] == "credits,videos"
+            assert "ta" in request.url.params["include_video_language"].split(",")
             return httpx.Response(200, json=DETAILS)
         return httpx.Response(404)
 
@@ -154,3 +155,9 @@ def test_poster_url():
     assert tmdb.poster_url("/abc.jpg") == "https://image.tmdb.org/t/p/w342/abc.jpg"
     assert tmdb.poster_url("/abc.jpg", "w92").endswith("/w92/abc.jpg")
     assert tmdb.poster_url(None) is None
+
+
+def test_youtube_search_fallback():
+    url = tmdb.youtube_search_url("Vaaranam Aayiram", 2008)
+    assert url == "https://www.youtube.com/results?search_query=Vaaranam+Aayiram+2008+trailer"
+    assert tmdb.youtube_search_url("Amélie", None).endswith("search_query=Am%C3%A9lie+trailer")
