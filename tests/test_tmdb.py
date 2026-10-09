@@ -24,6 +24,13 @@ DETAILS = {
             {"name": "Hans Zimmer", "job": "Original Music Composer"},
         ],
     },
+    "videos": {
+        "results": [
+            {"site": "YouTube", "key": "teaser1", "type": "Teaser", "official": True},
+            {"site": "Vimeo", "key": "vimeo1", "type": "Trailer", "official": True},
+            {"site": "YouTube", "key": "trailer1", "type": "Trailer", "official": True},
+        ]
+    },
 }
 
 
@@ -45,7 +52,7 @@ class FakeTmdb:
         if request.url.path.startswith("/3/find/"):
             return httpx.Response(200, json={"movie_results": []})
         if request.url.path == "/3/movie/157336":
-            assert request.url.params["append_to_response"] == "credits"
+            assert request.url.params["append_to_response"] == "credits,videos"
             return httpx.Response(200, json=DETAILS)
         return httpx.Response(404)
 
@@ -62,7 +69,42 @@ def test_enrich_fetches_and_maps_fields(db):
     assert row.tagline.startswith("Mankind")
     assert row.director == "Christopher Nolan"  # deduplicated
     assert [c["name"] for c in row.cast] == ["Matthew McConaughey", "Anne Hathaway"]  # by order
+    assert row.cast[0]["character"] == "Cooper"
+    assert row.trailer_key == "trailer1"  # YouTube Trailer beats Teaser and Vimeo
     assert fake.calls == [f"/3/find/{INTERSTELLAR}", "/3/movie/157336"]
+
+
+@pytest.mark.parametrize(
+    ("videos", "expected"),
+    [
+        ([], None),
+        ([{"site": "Vimeo", "key": "v", "type": "Trailer"}], None),  # YouTube only
+        (
+            [
+                {"site": "YouTube", "key": "fan", "type": "Trailer", "official": False},
+                {
+                    "site": "YouTube",
+                    "key": "de",
+                    "type": "Trailer",
+                    "official": True,
+                    "iso_639_1": "de",
+                },
+                {
+                    "site": "YouTube",
+                    "key": "en",
+                    "type": "Trailer",
+                    "official": True,
+                    "iso_639_1": "en",
+                },
+            ],
+            "en",  # official beats fan-made, English beats German
+        ),
+        ([{"site": "YouTube", "key": "clip", "type": "Clip"}], "clip"),  # better than nothing
+    ],
+)
+def test_pick_trailer(videos, expected):
+    assert tmdb.pick_trailer(videos) == expected
+    assert tmdb.youtube_url("abc") == "https://www.youtube.com/watch?v=abc"
 
 
 def test_enrich_uses_cache_second_time(db):

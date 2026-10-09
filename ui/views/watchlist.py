@@ -80,24 +80,66 @@ def render_card(c: Card) -> None:
                 unsafe_allow_html=True,
             )
         st.markdown(f"**[{c.title}]({c.imdb_url})** ({c.year or '?'})")
-        bits = [
-            f"★ {c.imdb_rating}" if c.imdb_rating else None,
-            f"{c.runtime_min} min" if c.runtime_min else None,
-            f"P{c.priority}",
-            "🔞" if c.is_adult else None,
-        ]
-        st.caption(" · ".join(b for b in bits if b))
+        if c.tagline:
+            st.caption(f"_“{c.tagline}”_")
+        st.caption(_meta_line(c))
         st.caption(", ".join(c.genres))
+        if c.cast:
+            st.caption("🎭 " + ", ".join(name for name, _ in c.cast[:3]))
         if c.status != "to_watch":
             mine = f" · mine {c.my_rating}" if c.my_rating is not None else ""
             st.caption(f"✔ {c.status}{mine}")
         if c.notes:
             st.caption(f"📝 _{c.notes}_")
-        if c.overview:
-            with st.expander("Plot"):
-                if c.director:
-                    st.caption(f"Director: {c.director}")
-                st.write(c.overview)
+        label = "▶ Trailer & details" if c.trailer_url else "ℹ️ Details"
+        if st.button(label, key=f"details-{c.tconst}", width="stretch"):
+            show_details(c)
+
+
+def _meta_line(c: Card) -> str:
+    bits = [
+        f"★ {c.imdb_rating}" if c.imdb_rating else None,
+        f"{c.runtime_min} min" if c.runtime_min else None,
+        f"P{c.priority}",
+        "🔞" if c.is_adult else None,
+    ]
+    return " · ".join(b for b in bits if b)
+
+
+# A modal window over the grid. Streamlit shows it when the decorated function is called
+# (here: when a card's button was clicked in this re-run); closing it re-runs the page.
+@st.dialog("Movie details", width="large")
+def show_details(c: Card) -> None:
+    st.subheader(f"{c.title} ({c.year or '?'})")
+    if c.tagline:
+        st.markdown(f"_“{c.tagline}”_")
+    left, right = st.columns([3, 2])
+    with left:
+        if c.trailer_url:
+            st.video(c.trailer_url)  # YouTube embed, plays right here
+        elif c.poster:
+            st.image(c.poster, width=260)
+        else:
+            st.caption("No trailer or poster found on TMDB.")
+    with right:
+        votes = f" ({c.num_votes:,} votes)" if c.num_votes else ""
+        st.markdown(f"**★ {c.imdb_rating or '–'}**{votes}")
+        st.caption(_meta_line(c) + " · " + ", ".join(c.genres))
+        if c.director:
+            st.markdown(f"**Director:** {c.director}")
+        if c.cast:
+            st.markdown("**Cast**")
+            st.markdown("\n".join(f"- {name} _as {role}_" if role else f"- {name}"
+                                  for name, role in c.cast))  # fmt: skip
+    if c.overview:
+        st.markdown("**Plot**")
+        st.write(c.overview)
+    if c.notes:
+        st.caption(f"📝 {c.notes}")
+    links = f"[IMDb ↗]({c.imdb_url})"
+    if c.trailer_url:
+        links += f" · [Trailer on YouTube ↗]({c.trailer_url})"
+    st.caption(links)
 
 
 for start in range(0, len(cards), columns):

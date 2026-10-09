@@ -172,6 +172,7 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-09 | Project is an installable package (hatchling; `app` + `ui`), installed editable by uv | `import app` works from Streamlit (runs from ui/), scripts, anywhere |
 | 2026-10-09 | Streamlit: `st.navigation` + `ui/views/`, pages get frozen dataclasses from `ui/data.py`; watchlist not cached, moods/genres cached 10 min | Pages stay simple; fresh data after CLI changes; AppTest smoke tests |
 | 2026-10-09 | Streamlit entry is `ui/main.py`, never `ui/app.py` | Streamlit puts `ui/` first on sys.path, so `ui/app.py` shadowed the `app` package ("'app' is not a package"). Guarded by a test |
+| 2026-10-09 | Trailers: `append_to_response=credits,videos` (still 1 call), best YouTube video stored as `trailer_key` (migration 0005); shown in an `st.dialog` with `st.video` | Trailer + full cast + plot in one place without leaving the grid |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |

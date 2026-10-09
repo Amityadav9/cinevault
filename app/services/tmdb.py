@@ -66,10 +66,32 @@ class TmdbClient:
         return results[0]["id"] if results else None
 
     def movie_details(self, tmdb_id: int) -> dict[str, Any]:
-        return self._get(f"/movie/{tmdb_id}", append_to_response="credits")
+        # details + cast/crew + videos in ONE request
+        return self._get(f"/movie/{tmdb_id}", append_to_response="credits,videos")
 
     def close(self) -> None:
         self._http.close()
+
+
+def youtube_url(trailer_key: str | None) -> str | None:
+    return f"https://www.youtube.com/watch?v={trailer_key}" if trailer_key else None
+
+
+def pick_trailer(videos: list[dict[str, Any]]) -> str | None:
+    """Best YouTube video key: Trailer > Teaser > anything, official first, English first."""
+    youtube = [v for v in videos if v.get("site") == "YouTube" and v.get("key")]
+    if not youtube:
+        return None
+    type_rank = {"Trailer": 0, "Teaser": 1}
+    best = min(
+        youtube,
+        key=lambda v: (
+            type_rank.get(v.get("type", ""), 2),
+            not v.get("official", False),
+            v.get("iso_639_1") != "en",
+        ),
+    )
+    return best["key"]
 
 
 def enrich(session: Session, tconst: str, client: TmdbClient, *, force: bool = False) -> TmdbCache:
@@ -86,6 +108,7 @@ def enrich(session: Session, tconst: str, client: TmdbClient, *, force: bool = F
     tmdb_id = client.find_movie_id(tconst)
     row.tmdb_id = tmdb_id
     row.poster_path = row.overview = row.tagline = row.director = row.cast = None
+    row.trailer_key = None
     if tmdb_id is not None:
         d = client.movie_details(tmdb_id)
         credits = d.get("credits", {})
@@ -98,6 +121,7 @@ def enrich(session: Session, tconst: str, client: TmdbClient, *, force: bool = F
             {"name": c["name"], "character": c.get("character") or ""}
             for c in sorted(credits.get("cast", []), key=lambda c: c.get("order", 99))
         ][:TOP_CAST]
+        row.trailer_key = pick_trailer(d.get("videos", {}).get("results", []))
     row.fetched_at = datetime.now(UTC)
     session.add(row)
     session.flush()

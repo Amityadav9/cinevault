@@ -14,7 +14,7 @@ from sqlalchemy import select
 from app.db.models import TmdbCache
 from app.db.session import SessionLocal
 from app.services import catalog, watchlist
-from app.services.tmdb import poster_url
+from app.services.tmdb import poster_url, youtube_url
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,9 @@ class Card:
     poster: str | None
     director: str | None
     overview: str | None
+    tagline: str | None
+    cast: tuple[tuple[str, str], ...]  # (actor, character), billing order
+    trailer_url: str | None
 
     @property
     def imdb_url(self) -> str:
@@ -73,6 +76,9 @@ def load_cards(status: str | None) -> list[Card]:
                     poster=poster_url(d.poster_path) if d else None,
                     director=d.director if d else None,
                     overview=d.overview if d else None,
+                    tagline=d.tagline if d else None,
+                    cast=tuple((c["name"], c["character"]) for c in (d.cast or [])) if d else (),
+                    trailer_url=youtube_url(d.trailer_key) if d else None,
                 )
             )
         return cards
