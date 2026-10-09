@@ -177,6 +177,8 @@ class TmdbCache(Base):
     tmdb_id: Mapped[int | None] = mapped_column(Integer)
     poster_path: Mapped[str | None] = mapped_column(Text)
     overview: Mapped[str | None] = mapped_column(Text)
+    tagline: Mapped[str | None] = mapped_column(Text)
+    director: Mapped[str | None] = mapped_column(Text)  # "A, B" if several
     cast: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
     fetched_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()

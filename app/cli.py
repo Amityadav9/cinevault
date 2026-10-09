@@ -6,6 +6,8 @@ uv run python -m app.cli add "intersteller 2014" -p 1 -n "Nolan, rewatch in IMAX
 uv run python -m app.cli search "the godfater"
 uv run python -m app.cli list                 # to-watch (default)
 uv run python -m app.cli list --status all
+uv run python -m app.cli show "interstellar"  # plot, director, cast, poster link
+uv run python -m app.cli enrich               # fetch TMDB details for older entries
 uv run python -m app.cli watched "interstellar" --rating 9
 uv run python -m app.cli remove "interstellar"
 """
@@ -18,7 +20,7 @@ from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 
 from app.db.session import SessionLocal
-from app.services import watchlist
+from app.services import tmdb, watchlist
 from app.services.matcher import Candidate, find_candidates
 from app.services.parse_input import UnparseableInput, parse_input
 
@@ -160,7 +162,86 @@ def _add_one(user_input: str, priority: int | None, notes: str | None, yes: bool
             f"[green]✓ Added[/green] {_fmt_movie(item.movie.title, item.movie.year)} "
             f"· priority {item.priority} · {chosen.imdb_url}"
         )
+        # Details are a nice-to-have: if TMDB fails, the movie is still on the list.
+        if details := _enrich_quietly(session, chosen.tconst):
+            if details.director:
+                console.print(f"  [dim]Director:[/dim] {details.director}")
+            if details.overview:
+                console.print(f"  [dim]{_shorten(details.overview, 160)}[/dim]")
         return True
+
+
+def _shorten(text: str, width: int) -> str:
+    return text if len(text) <= width else text[: width - 1].rsplit(" ", 1)[0] + "…"
+
+
+def _enrich_quietly(session, tconst: str, force: bool = False) -> tmdb.TmdbCache | None:
+    try:
+        client = tmdb.TmdbClient()
+        try:
+            row = tmdb.enrich(session, tconst, client, force=force)
+        finally:
+            client.close()
+    except tmdb.TmdbError as e:
+        session.rollback()
+        console.print(f"  [yellow]• no TMDB details: {e}[/yellow]")
+        return None
+    session.commit()
+    return row
+
+
+@app.command()
+def show(
+    user_input: Annotated[str, typer.Argument(help="title or IMDb URL of a watchlist entry")],
+):
+    """Full details of a watchlist movie: plot, director, cast, poster link."""
+    with SessionLocal() as session:
+        try:
+            item = watchlist.find(session, user_input)
+        except (watchlist.WatchlistError, UnparseableInput) as e:
+            console.print(f"[yellow]• {e}[/yellow]")
+            raise typer.Exit(1) from e
+        m, d = item.movie, _enrich_quietly(session, item.tconst)  # cached → no API call
+        console.print(f"\n{_fmt_movie(m.title, m.year, m.is_adult)}")
+        if d and d.tagline:
+            console.print(f"[italic]{d.tagline}[/italic]")
+        rating = f"{m.rating.avg_rating} ★ ({_fmt_votes(m.rating.num_votes)})" if m.rating else "-"
+        console.print(
+            f"{rating} · {m.runtime_min or '?'} min · {', '.join(g.name for g in m.genres)}"
+        )
+        if d and d.director:
+            console.print(f"[dim]Director:[/dim] {d.director}")
+        if d and d.cast:
+            cast = ", ".join(c["name"] for c in d.cast[:5])
+            console.print(f"[dim]Cast:[/dim] {cast}")
+        if d and d.overview:
+            console.print(f"\n{d.overview}\n")
+        style = STATUS_STYLE[item.status]
+        console.print(
+            f"[dim]Status:[/dim] [{style}]{item.status}[/] · priority {item.priority}"
+            + (f" · my rating {item.my_rating}" if item.my_rating is not None else "")
+            + (f" · notes: {item.notes}" if item.notes else "")
+        )
+        console.print(f"[dim]IMDb:[/dim] https://www.imdb.com/title/{m.tconst}/")
+        if d and (url := tmdb.poster_url(d.poster_path, "w500")):
+            console.print(f"[dim]Poster:[/dim] {url}")
+
+
+@app.command()
+def enrich(
+    force: Annotated[bool, typer.Option("--force", help="re-fetch even if cached")] = False,
+):
+    """Fetch TMDB details for watchlist movies that don't have them yet."""
+    with SessionLocal() as session:
+        items = watchlist.list_items(session, status=None)
+        todo = [it for it in items if force or session.get(tmdb.TmdbCache, it.tconst) is None]
+        if not todo:
+            console.print("[dim]All watchlist movies already have TMDB details.[/dim]")
+            return
+        for it in todo:
+            ok = _enrich_quietly(session, it.tconst, force=force)
+            mark = "[green]✓[/green]" if ok and ok.tmdb_id else "[yellow]–[/yellow]"
+            console.print(f"{mark} {_fmt_movie(it.movie.title, it.movie.year)}")
 
 
 @app.command("list")

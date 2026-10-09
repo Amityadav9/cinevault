@@ -164,6 +164,9 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 | 2026-10-09 | Accent/case-insensitive search: `title_search = lower(f_unaccent(title))` STORED generated column + trigram index (migration 0003); old title index dropped | "amelie" now finds "Amélie"; `f_unaccent` is an IMMUTABLE wrapper because indexes need immutable functions |
 | 2026-10-09 | Services change data but never commit; callers own the transaction (unit of work) | CLI commits after the user confirms; tests roll back; same services reused by Streamlit/API/chatbot |
 | 2026-10-09 | Tests use a rolled-back transaction (`tests/conftest.py`, `join_transaction_mode="create_savepoint"`) | Real watchlist is never touched by tests, even when code calls `commit()` |
+| 2026-10-09 | TMDB enrichment: /find (IMDb→TMDB id) + /movie?append_to_response=credits, cached in `tmdb_cache` (+tagline, director: migration 0004); misses cached too | 2 calls per movie, ever; adding never fails because TMDB is down |
+| 2026-10-09 | CLI `add` without argument = paste loop | Pasted text never goes through bash, so no quoting problems with `&` in URLs |
+| 2026-10-09 | TMDB tests use a fake server (`httpx.MockTransport`) | No network, no quota; can simulate 401 / 429 |
 | 2026-10-08 | pre-commit runs ruff before every commit | Keeps messy code out of git history automatically |
 | 2026-10-08 | Work step by step, with a check-in after each step | Learning project: understand every step |
 | 2026-10-08 | uv for everything | Fast, lockfile, no manual venvs |
