@@ -47,7 +47,7 @@ movies_collection/
     api/                  # FastAPI routers: movies, watchlist, import, chat
     llm/                  # provider.py (Ollama/Groq), tools.py, agent.py
     cli.py                # terminal: search / add / list / watched / remove (Typer + Rich)
-  ui/app.py               # Streamlit entry (navigation + DB/schema guard)
+  ui/main.py               # Streamlit entry (navigation + DB/schema guard)
   ui/views/*.py           # one file per page
   ui/data.py              # services → display-ready dataclasses for pages
   tests/
@@ -120,7 +120,7 @@ Healthchecks, structured logging, pytest (services + API via TestClient), and Gi
 - Phase 0: `uv run python -m app.db.session` prints the Postgres version; pgAdmin connects to `localhost:5435`.
 - Phase 1: the loader runs → `SELECT count(*) FROM movies` ≈ 700k in pgAdmin; EXPLAIN shows the trigram index being used.
 - Phase 2: add a handful of real URLs and titles (IMDb link, Google search, typo'd title) → the right movie is proposed, the duplicate is rejected.
-- Phase 3: `uv run streamlit run ui/app.py` shows the poster grid and filters work.
+- Phase 3: `uv run streamlit run ui/main.py` shows the poster grid and filters work.
 - Phase 4: `uv run pytest` passes; `/docs` Swagger can do full CRUD.
 - Phase 5: chat asks resolve to correct tool calls on both Ollama and Groq.
 - Phase 6: a fresh `docker compose up` runs the whole stack.

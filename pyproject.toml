@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 # Make `app` an installable package: `uv sync` installs it in editable mode, so
-# `import app` works from anywhere (Streamlit runs ui/app.py with ui/ as its folder).
+# `import app` works from anywhere (Streamlit runs ui/main.py with ui/ as its folder).
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

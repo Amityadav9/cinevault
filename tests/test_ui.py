@@ -12,13 +12,21 @@ from streamlit.testing.v1 import AppTest
 UI = Path(__file__).resolve().parents[1] / "ui"
 
 
+def test_ui_files_dont_shadow_packages():
+    # Streamlit puts ui/ first on sys.path, so a file ui/app.py would hide the `app`
+    # package ("'app' is not a package"). This bit us once; never again.
+    packages = {"app", "ui"}
+    clashes = [p.name for p in UI.rglob("*.py") if p.stem in packages]
+    assert not clashes, f"rename {clashes}: they shadow our packages under Streamlit"
+
+
 @pytest.fixture
 def watchlist_page(db_ready) -> AppTest:
     return AppTest.from_file(str(UI / "views/watchlist.py"), default_timeout=30).run()
 
 
 def test_app_entry_runs(db_ready):
-    at = AppTest.from_file(str(UI / "app.py"), default_timeout=30).run()
+    at = AppTest.from_file(str(UI / "main.py"), default_timeout=30).run()
     assert not at.exception
     assert not at.error  # schema/DB guard didn't fire
 

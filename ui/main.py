@@ -1,6 +1,6 @@
 """CineVault Streamlit entry point.
 
-uv run streamlit run ui/app.py      → http://localhost:8501
+uv run streamlit run ui/main.py      → http://localhost:8501
 """
 
 import streamlit as st
