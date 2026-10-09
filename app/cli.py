@@ -18,14 +18,32 @@ import typer
 from rich.console import Console
 from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
+from sqlalchemy.exc import OperationalError
 
-from app.db.session import SessionLocal
+from app.db.session import SessionLocal, schema_versions
 from app.services import tmdb, watchlist
 from app.services.matcher import Candidate, find_candidates
 from app.services.parse_input import UnparseableInput, parse_input
 
 app = typer.Typer(help="CineVault: your personal movie watchlist.", no_args_is_help=True)
 console = Console()
+
+
+@app.callback()
+def _check_database() -> None:
+    """Runs before every command: fail early and clearly if the DB is down or behind."""
+    try:
+        current, head = schema_versions()
+    except OperationalError as e:
+        console.print("[red]✗ Can't reach the database.[/red] Start it: docker compose up -d db")
+        raise typer.Exit(1) from e
+    if current != head:
+        console.print(
+            f"[red]✗ Database schema is at {current}, the code expects {head}.[/red]\n"
+            "  Run: uv run alembic upgrade head"
+        )
+        raise typer.Exit(1)
+
 
 STATUS_STYLE = {"to_watch": "cyan", "watched": "green", "dropped": "dim"}
 

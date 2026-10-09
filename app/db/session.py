@@ -15,6 +15,20 @@ def get_session() -> Iterator[Session]:
         yield session
 
 
+def schema_versions() -> tuple[str | None, str | None]:
+    """(revision the DB is at, newest revision in the code). Equal = up to date."""
+    from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
+    from alembic.script import ScriptDirectory
+
+    from app.core.config import ROOT_DIR
+
+    head = ScriptDirectory.from_config(Config(ROOT_DIR / "alembic.ini")).get_current_head()
+    with engine.connect() as conn:
+        current = MigrationContext.configure(conn).get_current_revision()
+    return current, head
+
+
 def check_connection() -> str:
     with engine.connect() as conn:
         return conn.execute(text("select version()")).scalar_one()
