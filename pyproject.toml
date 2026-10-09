@@ -2,6 +2,7 @@
 name = "cinevault"
 version = "0.1.0"
 requires-python = ">=3.13"
+license = "MIT"
 dependencies = [
     "alembic>=1.20.0",
     "httpx>=0.28.1",

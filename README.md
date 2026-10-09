@@ -40,3 +40,6 @@ The full plan, decisions log and a learning write-up per phase live in [`docs/`]
 
 
   *This product uses the TMDB API but is not endorsed or certified by TMDB.*
+
+## License
+[MIT](LICENSE). Covers the code only; IMDb and TMDB data stay under their own terms.
