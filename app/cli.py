@@ -1,6 +1,7 @@
 """CineVault command line. The thin presentation layer; logic lives in app/services.
 
-uv run python -m app.cli add "https://www.imdb.com/title/tt0816692/"
+uv run python -m app.cli add                  # asks "Paste a URL or title" again and again
+uv run python -m app.cli add "https://www.imdb.com/title/tt0816692/"   # quotes! (& in URLs)
 uv run python -m app.cli add "intersteller 2014" -p 1 -n "Nolan, rewatch in IMAX"
 uv run python -m app.cli search "the godfater"
 uv run python -m app.cli list                 # to-watch (default)
@@ -77,15 +78,48 @@ def search(user_input: Annotated[str, typer.Argument(help="IMDb URL, any URL, or
 
 @app.command()
 def add(
-    user_input: Annotated[str, typer.Argument(help="IMDb URL, any URL, or a title")],
+    user_input: Annotated[
+        str | None,
+        typer.Argument(help="IMDb URL, any URL, or a title. Leave out to paste several in a row."),
+    ] = None,
     priority: Annotated[int | None, typer.Option("--priority", "-p", min=1, max=5)] = None,
     notes: Annotated[str | None, typer.Option("--notes", "-n")] = None,
     yes: Annotated[
         bool, typer.Option("--yes", "-y", help="take the best match, no questions")
     ] = False,
 ):
-    """Find a movie and add it to your watchlist (you confirm first)."""
-    with SessionLocal() as session:
+    """Find a movie and add it to your watchlist (you confirm first).
+
+    Without an argument it keeps asking "Paste a URL or title". Pasting into the prompt
+    means no quotes are needed (bash never sees the & in long URLs). Empty Enter = done.
+    """
+    if user_input is not None:
+        _add_one(user_input, priority, notes, yes)
+        return
+
+    console.print("[dim]Paste a URL or type a title. Empty Enter (or Ctrl+C) = done.[/dim]")
+    added = 0
+    while True:
+        try:
+            text = Prompt.ask(
+                "\n[bold cyan]Paste a URL or title[/bold cyan]", default="", show_default=False
+            )
+        except (KeyboardInterrupt, EOFError):
+            break
+        if not text.strip():
+            break
+        try:
+            added += _add_one(text, priority, notes, yes)
+        except typer.Exit:  # "not found", cancel, duplicate → just ask for the next one
+            continue
+        except KeyboardInterrupt:  # Ctrl+C in the middle of one movie → skip it
+            console.print("[dim]skipped[/dim]")
+    console.print(f"\n[green]Done: {added} added.[/green] See them with: list")
+
+
+def _add_one(user_input: str, priority: int | None, notes: str | None, yes: bool) -> bool:
+    """Add one movie interactively. Returns True if added; raises typer.Exit otherwise."""
+    with SessionLocal() as session:  # one session (= transaction) per movie
         candidates = _find_or_exit(session, user_input)
 
         if yes:
@@ -126,6 +160,7 @@ def add(
             f"[green]✓ Added[/green] {_fmt_movie(item.movie.title, item.movie.year)} "
             f"· priority {item.priority} · {chosen.imdb_url}"
         )
+        return True
 
 
 @app.command("list")
